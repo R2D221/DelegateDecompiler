@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net40;netcoreapp3.1</TargetFrameworks>
+    <LangVersion>10.0</LangVersion>
   </PropertyGroup>
 
 </Project>

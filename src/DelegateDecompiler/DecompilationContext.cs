@@ -342,7 +342,21 @@ internal sealed class DecompilationContext : InstructionSink
 
     public override void ret()
     {
-        this.result = Expression.Lambda(delegateType: this.lambda.GetType(), body: this.stack.Pop(), parameters: this.parameters);
+        // Need type coercion here for the special case where the
+        // delegate body is a constant, such as true or false, which
+        // get translated to IL as constants of type int.
+
+        var delegateType = this.lambda.GetType();
+        var returnType = delegateType.GetMethod("Invoke").ReturnType;
+
+        var body = this.stack.Pop();
+
+        if (body.Type != returnType && body is ConstantExpression cBody)
+        {
+            body = Coerce(cBody, returnType);
+        }
+
+        this.result = Expression.Lambda(delegateType: delegateType, body: body, parameters: this.parameters);
     }
 
     public override void stloc_0() => this.OnAnyStloc(0);
@@ -372,19 +386,34 @@ internal sealed class DecompilationContext : InstructionSink
     {
         var right = this.stack.Pop();
         var left = this.stack.Pop();
-        // TODO: need to perform type coercion due to limited type set
-        // used in the VES execution environment. For example, the
-        // current code won't work for simple expressions such as
-        // `!someBoolean` because that gets translated to IL roughly as
-        // `someBoolean == 0`.
+
+        // Need to perform type coercion due to limited type set used
+        // in the VES execution environment. For example, simple
+        // expressions such as `!someBoolean` get translated to IL
+        // roughly as `someBoolean == 0`.
+
+        if (left.Type != right.Type)
+        {
+            if (left is ConstantExpression cl)
+            {
+                left = Coerce(cl, right.Type);
+            }
+            else if (right is ConstantExpression cr)
+            {
+                right = Coerce(cr, left.Type);
+            }
+        }
+
         this.stack.Push(Expression.MakeBinary(type, left, right));
     }
 
     private static ConstantExpression Coerce(ConstantExpression constant, Type type)
     {
-        // TODO: this is too simplistic and doesn't work in many cases,
-        // such as when converting an integer constant to a `char`.
-        return Expression.Constant(constant.Value, type);
+        // Convert.ChangeType is used for constants of small types such
+        // as bool, byte or char, that are represented in IL as
+        // constants of type int.
+
+        return Expression.Constant(Convert.ChangeType(constant.Value, type), type);
     }
 
     private static object GetDefaultValue(Type type)
