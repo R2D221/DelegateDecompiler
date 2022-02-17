@@ -7,6 +7,14 @@ namespace DelegateDecompiler.Sandbox.Net5
     {
         public static void Main(string[] args)
         {
+            TestBoolConstantInMethodCall();
+            TestByteConstantInMethodCall();
+            TestCharConstantInMethodCall();
+            TestBoolEquality();
+            TestBoolNegation();
+            TestBoolReturn();
+            TestIntEquality();
+
             int n = args.Length - 18;
             Action<IFoo> action = foo => foo.Property = n % -1;
 
@@ -39,6 +47,64 @@ namespace DelegateDecompiler.Sandbox.Net5
             Console.WriteLine("Final result:");
             Console.ResetColor();
             Console.WriteLine(expr);
+        }
+
+        private static void TestBoolConstantInMethodCall()
+        {
+            void methodCall(bool value) { }
+
+            var @delegate = new Action(() => methodCall(true));
+
+            var expr = @delegate.Decompile();
+        }
+
+        private static void TestByteConstantInMethodCall()
+        {
+            void methodCall(byte value) { }
+
+            var @delegate = new Action(() => methodCall(10));
+
+            var expr = @delegate.Decompile();
+        }
+
+        private static void TestCharConstantInMethodCall()
+        {
+            void methodCall(char value) { }
+
+            var @delegate = new Action(() => methodCall('a'));
+
+            var expr = @delegate.Decompile();
+        }
+
+        private static void TestBoolEquality()
+        {
+            var mybool = true;
+            var @delegate = new Func<bool>(() => mybool == false);
+
+            var expr = @delegate.Decompile();
+        }
+
+        private static void TestBoolNegation()
+        {
+            var someBoolean = true;
+            var @delegate = new Func<bool>(() => !someBoolean);
+
+            var expr = @delegate.Decompile();
+        }
+
+        private static void TestBoolReturn()
+        {
+            var @delegate = new Func<bool>(() => false);
+
+            var expr = @delegate.Decompile();
+        }
+
+        private static void TestIntEquality()
+        {
+            var i = 10;
+            var @delegate = new Func<bool>(() => i == 100L);
+
+            var expr = @delegate.Decompile();
         }
     }
 }
